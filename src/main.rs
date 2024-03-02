@@ -1,41 +1,34 @@
-use rand::{SeedableRng, Rng, distributions};
+use rand::{SeedableRng, Rng};
+use tools::{graph, final_graph, Point};
 
-#[derive(Debug, Copy, Clone)]
-struct Point {
-    x: f32,
-    y: f32,
-}
+// TODO: Take input from the user
+// TODO: Remove redundancy in the code
+// TODO: Make a better final report
+// TODO: Centroid in lib.rs?
 
-impl Point {
-    fn new(x: f32, y: f32) -> Self {
-        Self { x, y }
-    }
+const N_CENTROIDS: usize = 3;
+const MAX_LIMIT: usize = 500;
 
-    fn update(&mut self, x: &f32, y: &f32) {
-        self.x = *x;
-        self.y = *y;
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
 struct Centroid {
     current: Point,
     x_sum: f32,
     y_sum: f32,
     n: u32,
     previous: Point,
+    cluster: Vec<Point>
 }
 
 impl Centroid {
     fn new(x: f32, y: f32) -> Self {
-        Self { current: Point::new(x, y), x_sum: 0f32, y_sum: 0f32, n: 0u32, previous: Point::new(0f32, 0f32) }
+        Self { current: Point::new(x, y), x_sum: 0f32, y_sum: 0f32, n: 0u32, previous: Point::new(0f32, 0f32), cluster: Vec::new() }
     }
 
     fn new_random() -> Self {
         let mut rng = rand::rngs::StdRng::seed_from_u64(10);
-        let x = rng.gen_range(1..=100) as f32;
-        let y = rng.gen_range(0..=100) as f32;
-        Self { current: Point::new(x, y), x_sum: 0f32, y_sum: 0f32, n: 0u32, previous: Point::new(0f32, 0f32) }
+        let x = rng.gen_range(1..=MAX_LIMIT) as f32;
+        let y = rng.gen_range(0..=MAX_LIMIT) as f32;
+        Centroid::new(x, y)
     }
 
     fn euclidean_distance(&self, a: &Point) -> f32 {
@@ -60,9 +53,9 @@ impl Centroid {
 
     fn compare_to_previous(&self) -> bool {
         let delta_x = (self.previous.x - self.current.x).abs();
-        let delta_y = (self.previous.y - self.current.x).abs();
+        let delta_y = (self.previous.y - self.current.y).abs();
 
-        (delta_x < 0.0001 && delta_y < 0.0001)
+        delta_x < 0.001 && delta_y < 0.001
     }
 }
 
@@ -71,8 +64,8 @@ fn generate_random_coordinates(n: u32) -> Vec<Point> {
     let mut rng = rand::rngs::StdRng::seed_from_u64(10);
 
     for _ in 0..n {
-        let x: f32 = rng.gen_range(1..=100) as f32;
-        let y: f32 = rng.gen_range(1..=100) as f32;
+        let x: f32 = rng.gen_range(1..=MAX_LIMIT) as f32;
+        let y: f32 = rng.gen_range(1..=MAX_LIMIT) as f32;
         coords.push(Point::new(x, y))
     }
 
@@ -113,6 +106,20 @@ fn k_mean_clustering(centroids: &mut [Centroid], data: &[Point]) -> u32 {
         }
 
         if check {
+            for point in data {
+                let mut index_of_min = 0usize;
+                let mut min_distance = f32::MAX;
+
+                for (i, c) in centroids.iter_mut().enumerate() {
+                    let d = c.euclidean_distance(point);
+                    if d < min_distance {
+                        min_distance = d;
+                        index_of_min = i;
+                    }
+                }
+
+                centroids[index_of_min].cluster.push(point.clone());
+            }
             break;
         }
     }
@@ -122,22 +129,28 @@ fn k_mean_clustering(centroids: &mut [Centroid], data: &[Point]) -> u32 {
 
 fn main() {
     let sample = generate_random_coordinates(50);
-    // for (i, x) in sample.iter().enumerate() {
-    //     println!("Point {}: ({}, {})", i + 1, x.x, x.y);
-    // }
-    let mut centroids: Vec<Centroid> = Vec::new();
-    for _ in 0..3 {
+    let mut centroids: Vec<Centroid> = Vec::with_capacity(N_CENTROIDS);
+    for _ in 0..N_CENTROIDS {
         centroids.push(Centroid::new_random())
     }
-    // let distance = point.euclidean_distance(&sample[1]);
-    // println!("Centroid: ({}, {}) | Point: ({}, {}) | Distance: {}", point.x, point.y, sample[1].x, sample[1].y, distance);
-    let n = k_mean_clustering(&mut centroids, &sample);
 
-    // println!("Centroid: {:?}", point);
-    // point.update_centroid();
-    // println!("New Centroid: {:#?}", point);
-    println!("Number of iterations: {}", n);
-    for c in centroids {
-        println!("{:?}", c);
+    graph(&sample);
+
+    let n = k_mean_clustering(&mut centroids, &sample);
+    let mut clusters: Vec<Vec<Point>> = vec![Vec::new(); N_CENTROIDS];
+
+    for (i, c) in centroids.iter_mut().enumerate() {
+        clusters[i].push(c.current.clone());
+        for p in &c.cluster {
+            clusters[i].push(p.clone());
+        }
     }
+
+    final_graph(&clusters);
+
+    // for c in centroids {
+    //     println!("{:?}", c);
+    // }
+
+    println!("Number of iterations: {}", n);
 }
