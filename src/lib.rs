@@ -1,4 +1,4 @@
-use plotly::{Plot, Scatter, common::{Mode, Marker}};
+use plotly::{Plot, Scatter, common::{Mode, Marker}, Layout};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Point {
@@ -19,13 +19,16 @@ impl Point {
 
 pub fn graph(points: &[Point]) {
     let mut plot = Plot::new();
+    let layout = Layout::new().height(900).width(900);
     let trace = Scatter::new(points.iter().map(|p| p.x).collect(), points.iter().map(|p| p.y).collect()).mode(Mode::Markers);
     plot.add_trace(trace);
+    plot.set_layout(layout);
     plot.write_html("sample.html");
 }
 
 pub fn final_graph(clusters: &[Vec<Point>]) {
     let mut plot = Plot::new();
+    let layout = Layout::new().height(900).width(900);
     for (i, cluster) in clusters.iter().enumerate() {
         let cluster_name = format!("Cluster {}", i + 1);
         let centroid_name = format!("Centroid {}", i + 1);
@@ -34,5 +37,6 @@ pub fn final_graph(clusters: &[Vec<Point>]) {
         plot.add_trace(trace);
         plot.add_trace(centroids);
     }
+    plot.set_layout(layout);
     plot.write_html("clusters.html");
 }

@@ -9,5 +9,6 @@ name = "tools"
 path = "src/lib.rs"
 
 [dependencies]
+colored = "2"
 rand = "0.8.5"
 plotly = { version = "0.8.4", features = ["kaleido"] }
